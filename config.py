@@ -10,7 +10,7 @@ class Config():
 
         self.use_trained_model_weights=False
 
-        self.iterations=230000
+        self.iterations=80000
 
         self.batch_size=64
 
@@ -38,15 +38,13 @@ class Config():
 
         self.target_shape=224
 
-        self.alpha=3
+        self.alpha=5
 
         self.sigma=2
 
         self.rotation_range=5
 
         self.zoom_amount=5
-
-        self.shift_range=0
 
         self.flip=50
 

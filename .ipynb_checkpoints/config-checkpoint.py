@@ -46,8 +46,6 @@ class Config():
 
         self.zoom_amount=5
 
-        self.shift_range=0
-
         self.flip=50
 
         self.random_state=0

@@ -2,7 +2,7 @@ import os
 import json
 import numpy as np
 import matplotlib.pyplot as plt
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 
 from comet_ml import Experiment,ExistingExperiment
 
@@ -77,9 +77,8 @@ def main():
     print("** create image generators **")
 
     params = {
-            "batch_size":cp.batch_size,
+            "batch_size": cp.batch_size,
             "source_size":cp.source_shape,
-            "target_size":cp.target_shape,
             "mean": cp.img_mean,
             "source_image_dir":cp.image_source_dir,
             "steps":cp.steps,
@@ -87,17 +86,17 @@ def main():
             "sigma":cp.sigma,
             "rotation_range":cp.rotation_range,
             "zoom_amount":cp.zoom_amount,
-            "shift_range":cp.shift_range,
             "shuffle":False,
             "random_state": cp.random_state,
-            "flip": cp.flip
+            "flip": cp.flip,
+            "idx": starting_idx*cp.batch_size,
         }
 
     train_sequence = AugmentedImageSequence(
         params
     )
     
-    #Dataset = utils.get_Dataset(train_sequence, starting_idx)
+    Dataset = torch.utils.data.DataLoader(train_sequence, cp.batch_size, shuffle=False, num_workers=18, pin_memory=True)
 
     print("** generate face classifier **")
     feature_extractor = ft_model(
@@ -140,6 +139,7 @@ def main():
     
     model = AdvserialAutoEncoder(generator=generator,
                                 discriminator=discriminator,
+                                feature_extractor=feature_extractor
                                 )
     model.to(cp.device)
     model = DataParallelModel(model, device_ids=[0,1])
@@ -157,53 +157,37 @@ def main():
     print(f'Number of parameters in Generator {gen_param}')
     print(f'Number of parameters in Discriminator {dis_param}')
     
-    #writer.add_graph(generator, [torch.randn(1, 3, 128, 128, device=cp.device), torch.randn(1, 2048, device=cp.device)])
-
     print(f"** start training **")
-    print(f"** Sample step {cp.sample_step} lamda {lamda} starting iteration {iteration} index {starting_idx} generator length {len(train_sequence)} total iterations {cp.iterations}**")
+    print(f"** Sample step {cp.sample_step} lamda {lamda} starting iteration {iteration} index {starting_idx}\
+    generator length {len(train_sequence)} total iterations {cp.iterations}**")
 
     img_mean = np.array(cp.img_mean) / 255.0
     pbar = tqdm(total=cp.iterations, initial=iteration)
-
+    
     with experiment.train():
         while(iteration < cp.iterations):
-            for source, target, real in train_sequence:
-                lam = torch.from_numpy(np.random.beta(0.2, 0.2, size=(source.shape[0], 1, 1, 1)).astype('float32'))
-
+            for idx, inputs in enumerate(Dataset):
+                source, target, real, lam = inputs
+                
                 source = source.to(cp.device)
                 target = target.to(cp.device)
-                real   = real.to(cp.device)
-                lam    = lam.to(cp.device)
-                
-                target_identity, features_r = feature_extractor.forward(target)
-                inputs = [source, target, real, features_r[-1], lam]
-                
+                real = real.to(cp.device)
+                lam = lam.to(cp.device)
+                inputs = [source, target, real, lam]
                 raw, mask, masked, t_loss, l2_loss = utils.train_step(model, inputs, generator_loss, discriminator_loss, generator_optim, discriminator_optim)
-                
+
                 iteration+=1
-
-                masked_identity, features_m = feature_extractor(masked)
-
-                prep = torch.abs(features_r[-1][:32]-features_m[-1]).mean()
-
-                target_identity = np.argmax(target_identity.cpu().numpy(), axis=1)
-                changed_identity = np.argmax(masked_identity.cpu().numpy(), axis=1)
-                
-                accuracy = accuracy_score(target_identity[:32], changed_identity)
-
-                metrics = {'total_loss':t_loss, 'L2_loss': l2_loss,
-                            'Accuracy': accuracy, '1x1': prep}
-                
+                metrics = {'total_loss':t_loss, 'L2_loss': l2_loss}
                 writer.add_scalars('Metrics',metrics,global_step=iteration)
-                
                 experiment.log_metrics(metrics, step=iteration)
-                
                 pbar.update(1)
 
                 if(iteration % 100 ==0):
                     i = np.random.randint(0, int(cp.batch_size/2-1))
+                    
                     diff = torch.abs(masked[i]-target[i])
                     experiment.log_histogram_3d(generator.decoder_dense.weight.cpu().detach().numpy())
+
                     experiment.log_image(target[i].cpu().detach(), 'target', image_channels="first", step=iteration)
                     experiment.log_image(raw[i].cpu().detach()   , 'raw',    image_channels="first", step=iteration)
                     experiment.log_image(masked[i].cpu().detach(), 'masked', image_channels="first", step=iteration)
@@ -225,6 +209,9 @@ def main():
                     break
 
             starting_idx = 0
+            train_sequence.idx = starting_idx
+            train_sequence.on_epoch_end()
+            
         print("** done! **")
 
 if __name__ == "__main__":

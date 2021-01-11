@@ -26,18 +26,18 @@ def get_Dataset(train_sequence, starting_idx):
     return dataset.prefetch(tf.data.AUTOTUNE)
 
 def train_step(model, inputs, loss1, loss2, optim1, optim2):
-    s, t, r, res_vec, lam = inputs
+    s, t, r, lam = inputs
     y = 1-lam[:, :, 0, 0]
     
     optim1.zero_grad()
-    outputs = model([s, r, res_vec, lam])  
+    outputs = model([s, r, lam])  
     total_loss = loss1(outputs, (r, t, y)).mean()
     total_loss.backward()
     optim1.step()
     
     y = lam[:, :, 0, 0]
     optim2.zero_grad()
-    outputs = model([s, r, res_vec, lam]) 
+    outputs = model([s, r, lam]) 
     l2_loss = loss2(outputs, (r, t, y)).mean()
     l2_loss.backward()
     optim2.step()

@@ -11,5 +11,6 @@ class ft_model(nn.Module):
         self.backbone = resnet50_ft(weights_path)
     
     def forward(self, x):
-        x = F.interpolate(x, size=(224, 224), mode='bicubic')
-        return self.backbone(x*255)
+        x = F.interpolate(x, size=(224, 224), mode='bicubic', align_corners=True)
+        x = x*255
+        return self.backbone(x)

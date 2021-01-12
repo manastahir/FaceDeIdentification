@@ -177,9 +177,10 @@ def main():
                 inputs = [source, target, real, t_a[-1], lam]
                 raw,mask,masked,t_loss,l2_loss = utils.train_step(model, inputs, generator_loss, discriminator_loss, generator_optim, discriminator_optim)
                 
+                masked = masked.to(cp.device)
                 m_identity, m_a = feature_extractor(masked)
                 accuracy = accuracy_score(t_identity.cpu().detach().numpy().argmax(axis=1), m_identity.cpu().detach().numpy().argmax(axis=1))
-                rep_diff = np.abs((t_a.cpu().detach().numpy() - m_a.cpu().detach().numpy())).mean()
+                rep_diff = np.abs((t_a[-1].cpu().detach().numpy() - m_a[-1].cpu().detach().numpy())).mean()
                 rec_loss = np.abs(real.cpu().detach().numpy() - raw.cpu().detach().numpy()).mean()
                 metrics = {'total_loss':t_loss, 'L2_loss': l2_loss, 'accuracy':accuracy, '1x1':rep_diff, 'rec':rec_loss}          
                 writer.add_scalars('Metrics',metrics,global_step=iteration)
@@ -197,6 +198,7 @@ def main():
                     experiment.log_image(target[i].cpu().detach(), 'target', image_channels="first", step=iteration)
                     experiment.log_image(raw[i].cpu().detach()   , 'raw',    image_channels="first", step=iteration)
                     experiment.log_image(masked[i].cpu().detach(), 'masked', image_channels="first", step=iteration)
+                    experiment.log_image(mask[i].cpu().detach().repeat(3,1,1), 'mask',     image_channels="first", step=iteration)
                     experiment.log_image(diff.cpu().detach(),      'diff',   image_channels="first", step=iteration)
                 
                 if(iteration % cp.sample_step == 0):

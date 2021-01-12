@@ -74,6 +74,7 @@ class Generator(Network):
           
             #Decoder
             x = self.decoder_dense(x)
+            
             x = self.upscale_1(Reshape(-1, 1024, 4, 4)(x))
             x = self.residual_1(x)
             
@@ -133,9 +134,7 @@ class AdvserialAutoEncoder(Network):
     
     def forward(self, inputs):
         source, real, resnet_vec, lam = inputs
-        
-        resnet_vec = activatons[-1]
-        
+
         raw, mask = self.generator([source, resnet_vec])
         masked = raw*mask +(1-mask)*source
         

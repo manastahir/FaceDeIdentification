@@ -27,13 +27,6 @@ def get_Dataset(train_sequence, starting_idx):
 
 def train_step(model, inputs, loss1, loss2, optim1, optim2):
     s, t, r, rep, lam = inputs
-    y = 1-lam[:, :, 0, 0]
-    
-    optim1.zero_grad()
-    outputs = model([s, r, rep, lam])  
-    total_loss = loss1(outputs, (r, t, y)).mean()
-    total_loss.backward()
-    optim1.step()
     
     y = lam[:, :, 0, 0]
     optim2.zero_grad()
@@ -42,9 +35,16 @@ def train_step(model, inputs, loss1, loss2, optim1, optim2):
     l2_loss.backward()
     optim2.step()
     
-    return [torch.cat([outputs[0][0], outputs[1][0]], dim=0),
-            torch.cat([outputs[0][1], outputs[1][1]], dim=0),
-            torch.cat([outputs[0][2], outputs[1][2]], dim=0),
+    y = 1-lam[:, :, 0, 0]
+    optim1.zero_grad()
+    outputs = model([s, r, rep, lam])  
+    total_loss = loss1(outputs, (r, t, y)).mean()
+    total_loss.backward()
+    optim1.step()
+    
+    return [torch.cat([outputs[0][0].cpu().detach(), outputs[1][0].cpu().detach()], dim=0),
+            torch.cat([outputs[0][1].cpu().detach(), outputs[1][1].cpu().detach()], dim=0),
+            torch.cat([outputs[0][2].cpu().detach(), outputs[1][2].cpu().detach()], dim=0),
             total_loss.data.item(), l2_loss.data.item()]
     
     

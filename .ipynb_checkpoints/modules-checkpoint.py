@@ -16,8 +16,8 @@ class DepthwiseSeparableConv2DBlock(nn.Module):
         super(DepthwiseSeparableConv2DBlock, self).__init__()
 
         self.block = nn.Sequential(OrderedDict([
-        (f'depthwise_{block_no}', nn.Conv2d(nin, nin, kernel_size=ksize, padding=1, stride=stride, groups=nin, bias=False)),
-        (f'pointwise_{block_no}',  nn.Conv2d(nin, nout, kernel_size=1, bias=False)),
+        (f'depthwise_{block_no}', nn.Conv2d(nin, nout, kernel_size=ksize, padding=1, stride=stride, groups=nin, bias=False)),
+        (f'pointwise_{block_no}',  nn.Conv2d(nout, nout, kernel_size=1, bias=False)),
         (f'instanceNorm_{block_no}', nn.InstanceNorm2d(nout, affine=True))
         ]))
     def forward(self, x):

@@ -54,7 +54,7 @@ class LossFunction(torch.nn.Module):
         total_loss += self.l1_loss(z[0], r[0])/(112*112*64)
         total_loss += self.l1_loss(z[1], r[1])/(56*56*256)
         total_loss += self.l1_loss(z[2], r[2])/(28*28*512)
-        total_loss += self.l1_loss(z[3], t[3])/(7*7*512)
+        total_loss += self.l1_loss(z[3], t[3])/(7*7*2048)
 
         total_loss -= (self.lamda*self.l1_loss(z[4], t[4]))
 
@@ -91,12 +91,12 @@ class LossFunction(torch.nn.Module):
                       self.c[4]*Lm + 
                       self.c[5]*Lm_x + self.c[5]*Lm_y)
         
-        return total_loss.view(-1, 1)
-#         return total_loss, [l2_loss.data.item(),
-#                             Lr_raw.data.item(), Lr_masked.data.item(), 
-#                             Lp_raw.data.item(), Lp_masked.data.item(), 
-#                             (Lgx_raw+Lgy_raw).data.item(), (Lgy_masked+Lgx_masked).data.item(), 
-#                             (Lm+Lm_x+Lm_y).data.item()]
+        #return total_loss.view(-1, 1)
+        return total_loss.view(-1, 1), (l2_loss.data.item(),
+                                        Lr_raw.data.item(), Lr_masked.data.item(), 
+                                        Lp_raw.data.item(), Lp_masked.data.item(), 
+                                        (Lgx_raw+Lgy_raw).data.item(), (Lgy_masked+Lgx_masked).data.item(), 
+                                        (Lm+Lm_x+Lm_y).data.item())
 
 class MSEloss(torch.nn.Module):
     

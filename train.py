@@ -65,7 +65,7 @@ def main():
                             auto_output_logging=False,
                             log_graph=True,
                         )
-        experiment.add_tag('experiment_1')
+        experiment.add_tag('experiment_3')
         training_stats['experiment_key'] = experiment.get_key()
         print(f'Stated new experiment with key {experiment.get_key()}')
     else:
@@ -139,7 +139,6 @@ def main():
     
     model = AdvserialAutoEncoder(generator=generator,
                                 discriminator=discriminator,
-                                feature_extractor=feature_extractor
                                 )
     model.to(cp.device)
     model = DataParallelModel(model, device_ids=[0,1])
@@ -173,17 +172,24 @@ def main():
                 target = target.to(cp.device)
                 real = real.to(cp.device)
                 lam = lam.to(cp.device)
-                inputs = [source, target, real, lam]
-                raw, mask, masked, t_loss, l2_loss = utils.train_step(model, inputs, generator_loss, discriminator_loss, generator_optim, discriminator_optim)
-
-                iteration+=1
-                metrics = {'total_loss':t_loss, 'L2_loss': l2_loss}
+                
+                t_identity, t_a = feature_extractor(target)
+                inputs = [source, target, real, t_a[-1], lam]
+                raw,mask,masked,t_loss,l2_loss = utils.train_step(model, inputs, generator_loss, discriminator_loss, generator_optim, discriminator_optim)
+                
+                m_identity, m_a = feature_extractor(masked)
+                accuracy = accuracy_score(t_identity.cpu().detach().numpy().argmax(axis=1), m_identity.cpu().detach().numpy().argmax(axis=1))
+                rep_diff = np.abs((t_a.cpu().detach().numpy() - m_a.cpu().detach().numpy())).mean()
+                rec_loss = np.abs(real.cpu().detach().numpy() - raw.cpu().detach().numpy()).mean()
+                metrics = {'total_loss':t_loss, 'L2_loss': l2_loss, 'accuracy':accuracy, '1x1':rep_diff, 'rec':rec_loss}          
                 writer.add_scalars('Metrics',metrics,global_step=iteration)
                 experiment.log_metrics(metrics, step=iteration)
+
+                iteration+=1
                 pbar.update(1)
 
                 if(iteration % 100 ==0):
-                    i = np.random.randint(0, int(cp.batch_size/2-1))
+                    i = np.random.randint(0, cp.batch_size)
                     
                     diff = torch.abs(masked[i]-target[i])
                     experiment.log_histogram_3d(generator.decoder_dense.weight.cpu().detach().numpy())

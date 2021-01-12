@@ -12,7 +12,7 @@ class Config():
 
         self.iterations=80000
 
-        self.batch_size=64
+        self.batch_size=32
 
         self.steps=None
 

@@ -10,9 +10,9 @@ class Config():
 
         self.use_trained_model_weights=False
 
-        self.iterations=230000
+        self.iterations=80000
 
-        self.batch_size=64
+        self.batch_size=32
 
         self.steps=None
 
@@ -38,7 +38,7 @@ class Config():
 
         self.target_shape=224
 
-        self.alpha=3
+        self.alpha=5
 
         self.sigma=2
 

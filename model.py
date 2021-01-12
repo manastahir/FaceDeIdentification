@@ -125,17 +125,15 @@ class Discriminator(Network):
         return x.view(-1, 1)   
 
 class AdvserialAutoEncoder(Network):
-    def __init__(self, generator, discriminator, feature_extractor, **kwargs):
+    def __init__(self, generator, discriminator, **kwargs):
         super(AdvserialAutoEncoder, self).__init__(**kwargs)
         
         self.generator = generator
         self.discriminator = discriminator
-        self.feature_extractor = feature_extractor
     
     def forward(self, inputs):
-        source, real, lam = inputs
+        source, real, resnet_vec, lam = inputs
         
-        _, activatons = self.feature_extractor(source) 
         resnet_vec = activatons[-1]
         
         raw, mask = self.generator([source, resnet_vec])
